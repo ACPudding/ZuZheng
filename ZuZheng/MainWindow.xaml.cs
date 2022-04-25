@@ -237,6 +237,7 @@ namespace ZuZheng
                 DownloadMovieBtn.IsEnabled = true;
                 DownloadAudioBtn.IsEnabled = true;
                 DownloadAssetsBtn.IsEnabled = true;
+                progressbar.Value = 0;
             });
         }
 
@@ -300,6 +301,7 @@ namespace ZuZheng
                 DownloadMovieBtn.IsEnabled = true;
                 DownloadAudioBtn.IsEnabled = true;
                 DownloadAssetsBtn.IsEnabled = true;
+                progressbar.Value = 0;
             });
         }
 
@@ -382,6 +384,7 @@ namespace ZuZheng
                 DownloadMovieBtn.IsEnabled = true;
                 DownloadAudioBtn.IsEnabled = true;
                 DownloadAssetsBtn.IsEnabled = true;
+                progressbar.Value = 0;
             });
         }
 
