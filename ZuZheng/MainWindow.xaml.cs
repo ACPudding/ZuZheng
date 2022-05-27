@@ -4,6 +4,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using Google.Protobuf;
+using ICSharpCode.SharpZipLib.BZip2;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using MessageBox = HandyControl.Controls.MessageBox;
@@ -98,9 +100,22 @@ namespace ZuZheng
 
             ASVersionDisplay.Text = request.asVer;
             mstVersionDisplay.Text = request.mstVer;
-            //var mst_url = $"https://line3-patch-fate.bilibiligame.net/{request.serverVer}/MasterDataCachesOutput/{request.mstVer}/data.bin";
-            //var mstData = HttpRequest.Get(mst_url).ToBinary();
-            //File.WriteAllBytes(folder.FullName + "master", mstData);
+            var mst_url = request.cdnAddr + $"/MasterDataCachesOutput/{request.mstVer}/data.bin";
+            var mstData = HttpRequest.Get(mst_url).ToBinary();
+            if (!Directory.Exists(folder.FullName + @"\masterdata"))
+                Directory.CreateDirectory(folder.FullName + @"\masterdata");
+            File.WriteAllText(folder.FullName + @"\masterdata\member_request-raw.json", decrypted_mr.ToString());
+            File.WriteAllBytes(folder.FullName + @"\masterdata\masterdata.bz2", mstData);
+            var UMD = new Task(UnpackMasterData);
+            try
+            {
+                UMD.Start();
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Error("解析MasterData失败!\r\n\r\n错误: \r\n" + exception, "错误");
+            }
+
             var assetstorage = HttpRequest
                 .Get(request.cdnAddr + $"/NewResources/Android/AssetStorage.{request.asVer}.txt").ToText();
             File.WriteAllText(folder.FullName + "AssetStorage.txt", assetstorage);
@@ -166,6 +181,294 @@ namespace ZuZheng
             DownloadMovieBtn.IsEnabled = true;
             DownloadAudioBtn.IsEnabled = true;
             DownloadAssetsBtn.IsEnabled = true;
+        }
+
+        private void UnpackMasterData()
+        {
+            Dispatcher.Invoke(() => { MainForm.Title += " - 正在写入MasterData数据文件..."; });
+            var master = File.Open(folder.FullName + @"\masterdata\masterdata.bz2", FileMode.Open);
+            var unpacker = new MemoryStream();
+            BZip2.Decompress(master, unpacker);
+            var masterdata = unpacker.ToArray();
+            File.WriteAllBytes(folder.FullName + @"\masterdata\master_decompressed.protobuf", masterdata);
+            master.Close();
+            if (!Directory.Exists(folder.FullName + @"\masterdata\decrypted_masterdata"))
+                Directory.CreateDirectory(folder.FullName + @"\masterdata\decrypted_masterdata");
+            using (var input = File.OpenRead(folder.FullName + @"\masterdata\master_decompressed.protobuf"))
+            {
+                var d_masterd = mst_data.Parser.ParseFrom(input);
+                var formatter = new JsonFormatter(new JsonFormatter.Settings(true));
+
+                var mstEvent = new EventEntityArray();
+                mstEvent.MergeFrom(d_masterd.EventEntity);
+                var mstEventJsonString = formatter.Format(mstEvent);
+                var mstEventJObject = (JObject)JsonConvert.DeserializeObject(mstEventJsonString);
+                var mstEventArray = (JArray)JsonConvert.DeserializeObject(mstEventJObject["eventEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstEvent.json",
+                    mstEventArray.ToString());
+                var mstGacha = new GachaEntityArray();
+                mstGacha.MergeFrom(d_masterd.GachaEntity);
+                var mstGachaJsonString = formatter.Format(mstGacha);
+                var mstGachaJObject = (JObject)JsonConvert.DeserializeObject(mstGachaJsonString);
+                var mstGachaArray = (JArray)JsonConvert.DeserializeObject(mstGachaJObject["gachaEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstGacha.json",
+                    mstGachaArray.ToString());
+                var mstGift = new GiftEntityArray();
+                mstGift.MergeFrom(d_masterd.GiftEntity);
+                var mstGiftJsonString = formatter.Format(mstGift);
+                var mstGiftJObject = (JObject)JsonConvert.DeserializeObject(mstGiftJsonString);
+                var mstGiftArray = (JArray)JsonConvert.DeserializeObject(mstGiftJObject["giftEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstGift.json",
+                    mstGiftArray.ToString());
+                var mstQuest = new QuestEntityArray();
+                mstQuest.MergeFrom(d_masterd.QuestEntity);
+                var mstQuestJsonString = formatter.Format(mstQuest);
+                var mstQuestJObject = (JObject)JsonConvert.DeserializeObject(mstQuestJsonString);
+                var mstQuestArray = (JArray)JsonConvert.DeserializeObject(mstQuestJObject["questEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstQuest.json",
+                    mstQuestArray.ToString());
+                var mstQuestPickup = new QuestPickupEntityArray();
+                mstQuestPickup.MergeFrom(d_masterd.QuestPickupEntity);
+                var mstQuestPickupJsonString = formatter.Format(mstQuestPickup);
+                var mstQuestPickupJObject = (JObject)JsonConvert.DeserializeObject(mstQuestPickupJsonString);
+                var mstQuestPickupArray =
+                    (JArray)JsonConvert.DeserializeObject(mstQuestPickupJObject["questPickupEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstQuestPickup.json",
+                    mstQuestPickupArray.ToString());
+                var mstItem = new ItemEntityArray();
+                mstItem.MergeFrom(d_masterd.ItemEntity);
+                var mstItemJsonString = formatter.Format(mstItem);
+                var mstItemJObject = (JObject)JsonConvert.DeserializeObject(mstItemJsonString);
+                var mstItemArray = (JArray)JsonConvert.DeserializeObject(mstItemJObject["itemEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstItem.json",
+                    mstItemArray.ToString());
+                var mstClassRelation = new ClassRelationEntityArray();
+                mstClassRelation.MergeFrom(d_masterd.ClassRelationEntity);
+                var mstClassRelationJsonString = formatter.Format(mstClassRelation);
+                var mstClassRelationJObject = (JObject)JsonConvert.DeserializeObject(mstClassRelationJsonString);
+                var mstClassRelationArray =
+                    (JArray)JsonConvert.DeserializeObject(mstClassRelationJObject["classRelationEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstClassRelation.json",
+                    mstClassRelationArray.ToString());
+                var mstCombineLimit = new CombineLimitEntityArray();
+                mstCombineLimit.MergeFrom(d_masterd.CombineLimitEntity);
+                var mstCombineLimitJsonString = formatter.Format(mstCombineLimit);
+                var mstCombineLimitJObject = (JObject)JsonConvert.DeserializeObject(mstCombineLimitJsonString);
+                var mstCombineLimitArray =
+                    (JArray)JsonConvert.DeserializeObject(mstCombineLimitJObject["combineLimitEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstCombineLimit.json",
+                    mstCombineLimitArray.ToString());
+                var mstCombineSkill = new CombineSkillEntityArray();
+                mstCombineSkill.MergeFrom(d_masterd.CombineSkillEntity);
+                var mstCombineSkillJsonString = formatter.Format(mstCombineSkill);
+                var mstCombineSkillJObject = (JObject)JsonConvert.DeserializeObject(mstCombineSkillJsonString);
+                var mstCombineSkillArray =
+                    (JArray)JsonConvert.DeserializeObject(mstCombineSkillJObject["combineSkillEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstCombineSkill.json",
+                    mstCombineSkillArray.ToString());
+                var mstSvt = new ServantEntityArray();
+                mstSvt.MergeFrom(d_masterd.ServantEntity);
+                var mstSvtJsonString = formatter.Format(mstSvt);
+                var mstSvtJObject = (JObject)JsonConvert.DeserializeObject(mstSvtJsonString);
+                var mstSvtArray = (JArray)JsonConvert.DeserializeObject(mstSvtJObject["servantEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvt.json",
+                    mstSvtArray.ToString());
+                var mstSvtFilter = new ServantFilterEntityArray();
+                mstSvtFilter.MergeFrom(d_masterd.ServantFilterEntity);
+                var mstSvtFilterJsonString = formatter.Format(mstSvtFilter);
+                var mstSvtFilterJObject = (JObject)JsonConvert.DeserializeObject(mstSvtFilterJsonString);
+                var mstSvtFilterArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtFilterJObject["servantFilterEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtFilter.json",
+                    mstSvtFilterArray.ToString());
+                var mstSvtLimitAdd = new ServantLimitAddEntityArray();
+                mstSvtLimitAdd.MergeFrom(d_masterd.ServantLimitAddEntity);
+                var mstSvtLimitAddJsonString = formatter.Format(mstSvtLimitAdd);
+                var mstSvtLimitAddJObject = (JObject)JsonConvert.DeserializeObject(mstSvtLimitAddJsonString);
+                var mstSvtLimitAddArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtLimitAddJObject["servantLimitAddEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtLimitAdd.json",
+                    mstSvtLimitAddArray.ToString());
+                var mstSvtInviduality = new ServantIndividualityEntityArray();
+                mstSvtInviduality.MergeFrom(d_masterd.ServantIndividualityEntity);
+                var mstSvtInvidualityJsonString = formatter.Format(mstSvtInviduality);
+                var mstSvtInvidualityJObject = (JObject)JsonConvert.DeserializeObject(mstSvtInvidualityJsonString);
+                var mstSvtInvidualityArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtInvidualityJObject["servantIndividualityEntity"]
+                        .ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtInviduality.json",
+                    mstSvtInvidualityArray.ToString());
+                var mstSvtPassiveSkill = new ServantPassiveSkillEntityArray();
+                mstSvtPassiveSkill.MergeFrom(d_masterd.ServantPassiveSkillEntity);
+                var mstSvtPassiveSkillJsonString = formatter.Format(mstSvtPassiveSkill);
+                var mstSvtPassiveSkillJObject = (JObject)JsonConvert.DeserializeObject(mstSvtPassiveSkillJsonString);
+                var mstSvtPassiveSkillArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtPassiveSkillJObject["servantPassiveSkillEntity"]
+                        .ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtPassiveSkill.json",
+                    mstSvtPassiveSkillArray.ToString());
+                var mstSvtAppendPassiveSkill = new ServantAppendPassiveSkillEntityArray();
+                mstSvtAppendPassiveSkill.MergeFrom(d_masterd.ServantAppendPassiveSkillEntity);
+                var mstSvtAppendPassiveSkillJsonString = formatter.Format(mstSvtAppendPassiveSkill);
+                var mstSvtAppendPassiveSkillJObject =
+                    (JObject)JsonConvert.DeserializeObject(mstSvtAppendPassiveSkillJsonString);
+                if (!d_masterd.ServantAppendPassiveSkillEntity.IsEmpty)
+                {
+                    var mstSvtAppendPassiveSkillArray =
+                        (JArray)JsonConvert.DeserializeObject(
+                            mstSvtAppendPassiveSkillJObject["servantAppendPassiveSkillEntity"].ToString());
+                    File.WriteAllText(
+                        folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtAppendPassiveSkill.json",
+                        mstSvtAppendPassiveSkillArray.ToString());
+                }
+                else
+                {
+                    File.WriteAllText(
+                        folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtAppendPassiveSkill.json", "[]");
+                }
+
+                var mstSvtExp = new ServantExpEntityArray();
+                mstSvtExp.MergeFrom(d_masterd.ServantExpEntity);
+                var mstSvtExpJsonString = formatter.Format(mstSvtExp);
+                var mstSvtExpJObject = (JObject)JsonConvert.DeserializeObject(mstSvtExpJsonString);
+                var mstSvtExpArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtExpJObject["servantExpEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtExp.json",
+                    mstSvtExpArray.ToString());
+                var mstSvtCostume = new ServantCostumeEntityArray();
+                mstSvtCostume.MergeFrom(d_masterd.ServantCostumeEntity);
+                var mstSvtCostumeJsonString = formatter.Format(mstSvtCostume);
+                var mstSvtCostumeJObject = (JObject)JsonConvert.DeserializeObject(mstSvtCostumeJsonString);
+                var mstSvtCostumeArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtCostumeJObject["servantCostumeEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtCostume.json",
+                    mstSvtCostumeArray.ToString());
+                var mstSvtLimit = new ServantLimitEntityArray();
+                mstSvtLimit.MergeFrom(d_masterd.ServantLimitEntity);
+                var mstSvtLimitJsonString = formatter.Format(mstSvtLimit);
+                var mstSvtLimitJObject = (JObject)JsonConvert.DeserializeObject(mstSvtLimitJsonString);
+                var mstSvtLimitArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtLimitJObject["servantLimitEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtLimit.json",
+                    mstSvtLimitArray.ToString());
+                var mstSvtCard = new ServantCardEntityArray();
+                mstSvtCard.MergeFrom(d_masterd.ServantCardEntity);
+                var mstSvtCardJsonString = formatter.Format(mstSvtCard);
+                var mstSvtCardJObject = (JObject)JsonConvert.DeserializeObject(mstSvtCardJsonString);
+                var mstSvtCardArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtCardJObject["servantCardEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtCard.json",
+                    mstSvtCardArray.ToString());
+                var mstSvtComment = new ServantCommentEntityArray();
+                mstSvtComment.MergeFrom(d_masterd.ServantCommentEntity);
+                var mstSvtCommentJsonString = formatter.Format(mstSvtComment);
+                var mstSvtCommentJObject = (JObject)JsonConvert.DeserializeObject(mstSvtCommentJsonString);
+                var mstSvtCommentArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtCommentJObject["servantCommentEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtComment.json",
+                    mstSvtCommentArray.ToString());
+                var mstSvtTreasureDevice = new ServantTreasureDvcEntityArray();
+                mstSvtTreasureDevice.MergeFrom(d_masterd.ServantTreasureDvcEntity);
+                var mstSvtTreasureDeviceJsonString = formatter.Format(mstSvtTreasureDevice);
+                var mstSvtTreasureDeviceJObject =
+                    (JObject)JsonConvert.DeserializeObject(mstSvtTreasureDeviceJsonString);
+                var mstSvtTreasureDeviceArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtTreasureDeviceJObject["servantTreasureDvcEntity"]
+                        .ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtTreasureDevice.json",
+                    mstSvtTreasureDeviceArray.ToString());
+                var mstBuff = new BuffEntityArray();
+                mstBuff.MergeFrom(d_masterd.BuffEntity);
+                var mstBuffJsonString = formatter.Format(mstBuff);
+                var mstBuffJObject = (JObject)JsonConvert.DeserializeObject(mstBuffJsonString);
+                var mstBuffArray = (JArray)JsonConvert.DeserializeObject(mstBuffJObject["buffEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstBuff.json",
+                    mstBuffArray.ToString());
+                var mstCv = new CvEntityArray();
+                mstCv.MergeFrom(d_masterd.CvEntity);
+                var mstCvJsonString = formatter.Format(mstCv);
+                var mstCvJObject = (JObject)JsonConvert.DeserializeObject(mstCvJsonString);
+                var mstCvArray = (JArray)JsonConvert.DeserializeObject(mstCvJObject["cvEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstCv.json",
+                    mstCvArray.ToString());
+                var mstIllustrator = new IllustratorEntityArray();
+                mstIllustrator.MergeFrom(d_masterd.IllustratorEntity);
+                var mstIllustratorJsonString = formatter.Format(mstIllustrator);
+                var mstIllustratorJObject = (JObject)JsonConvert.DeserializeObject(mstIllustratorJsonString);
+                var mstIllustratorArray =
+                    (JArray)JsonConvert.DeserializeObject(mstIllustratorJObject["illustratorEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstIllustrator.json",
+                    mstIllustratorArray.ToString());
+                var mstFunc = new FunctionEntityArray();
+                mstFunc.MergeFrom(d_masterd.FunctionEntity);
+                var mstFuncJsonString = formatter.Format(mstFunc);
+                var mstFuncJObject = (JObject)JsonConvert.DeserializeObject(mstFuncJsonString);
+                var mstFuncArray = (JArray)JsonConvert.DeserializeObject(mstFuncJObject["functionEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstFunc.json",
+                    mstFuncArray.ToString());
+                var mstSkill = new SkillEntityArray();
+                mstSkill.MergeFrom(d_masterd.SkillEntity);
+                var mstSkillJsonString = formatter.Format(mstSkill);
+                var mstSkillJObject = (JObject)JsonConvert.DeserializeObject(mstSkillJsonString);
+                var mstSkillArray = (JArray)JsonConvert.DeserializeObject(mstSkillJObject["skillEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSkill.json",
+                    mstSkillArray.ToString());
+                var mstSkillDetail = new SkillDetailEntityArray();
+                mstSkillDetail.MergeFrom(d_masterd.SkillDetailEntity);
+                var mstSkillDetailJsonString = formatter.Format(mstSkillDetail);
+                var mstSkillDetailJObject = (JObject)JsonConvert.DeserializeObject(mstSkillDetailJsonString);
+                var mstSkillDetailArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSkillDetailJObject["skillDetailEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSkillDetail.json",
+                    mstSkillDetailArray.ToString());
+                var mstSkillLv = new SkillLvEntityArray();
+                mstSkillLv.MergeFrom(d_masterd.SkillLvEntity);
+                var mstSkillLvJsonString = formatter.Format(mstSkillLv);
+                var mstSkillLvJObject = (JObject)JsonConvert.DeserializeObject(mstSkillLvJsonString);
+                var mstSkillLvArray = (JArray)JsonConvert.DeserializeObject(mstSkillLvJObject["skillLvEntity"]
+                    .ToString().Replace("\"vals\"", "\"svals\""));
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSkillLv.json",
+                    mstSkillLvArray.ToString());
+                var mstTreasureDevice = new TreasureDvcEntityArray();
+                mstTreasureDevice.MergeFrom(d_masterd.TreasureDvcEntity);
+                var mstTreasureDeviceJsonString = formatter.Format(mstTreasureDevice);
+                var mstTreasureDeviceJObject = (JObject)JsonConvert.DeserializeObject(mstTreasureDeviceJsonString);
+                var mstTreasureDeviceArray =
+                    (JArray)JsonConvert.DeserializeObject(mstTreasureDeviceJObject["treasureDvcEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstTreasureDevice.json",
+                    mstTreasureDeviceArray.ToString());
+                var mstTreasureDeviceDetail = new TreasureDvcDetailEntityArray();
+                mstTreasureDeviceDetail.MergeFrom(d_masterd.TreasureDvcDetailEntity);
+                var mstTreasureDeviceDetailJsonString = formatter.Format(mstTreasureDeviceDetail);
+                var mstTreasureDeviceDetailJObject =
+                    (JObject)JsonConvert.DeserializeObject(mstTreasureDeviceDetailJsonString);
+                var mstTreasureDeviceDetailArray =
+                    (JArray)JsonConvert.DeserializeObject(mstTreasureDeviceDetailJObject["treasureDvcDetailEntity"]
+                        .ToString());
+                File.WriteAllText(
+                    folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstTreasureDeviceDetail.json",
+                    mstTreasureDeviceDetailArray.ToString());
+                var mstTreasureDeviceLv = new TreasureDvcLvEntityArray();
+                mstTreasureDeviceLv.MergeFrom(d_masterd.TreasureDvcLvEntity);
+                var mstTreasureDeviceLvJsonString = formatter.Format(mstTreasureDeviceLv);
+                var mstTreasureDeviceLvJObject = (JObject)JsonConvert.DeserializeObject(mstTreasureDeviceLvJsonString);
+                var mstTreasureDeviceLvArray =
+                    (JArray)JsonConvert.DeserializeObject(mstTreasureDeviceLvJObject["treasureDvcLvEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstTreasureDeviceLv.json",
+                    mstTreasureDeviceLvArray.ToString().Replace("\"vals", "\"svals"));
+                var npcSvtFollower = new NpcServantFollowerEntityArray();
+                npcSvtFollower.MergeFrom(d_masterd.NpcServantFollowerEntity);
+                var npcSvtFollowerJsonString = formatter.Format(npcSvtFollower);
+                var npcSvtFollowerJObject = (JObject)JsonConvert.DeserializeObject(npcSvtFollowerJsonString);
+                var npcSvtFollowerArray =
+                    (JArray)JsonConvert.DeserializeObject(npcSvtFollowerJObject["npcServantFollowerEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "npcSvtFollower.json",
+                    npcSvtFollowerArray.ToString());
+                MessageBox.Info("MasterData数据写入完成.", "写入完成");
+                input.Close();
+                Dispatcher.Invoke(() => { MainForm.Title = "ZuZheng"; });
+                GC.Collect();
+            }
         }
 
         private void DownloadMovieBtn_OnClick(object sender, RoutedEventArgs e)
