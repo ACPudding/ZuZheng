@@ -115,7 +115,7 @@ namespace ZuZheng
             {
                 MessageBox.Error("解析MasterData失败!\r\n\r\n错误: \r\n" + exception, "错误");
             }
-
+            GC.Collect();
             var assetstorage = HttpRequest
                 .Get(request.cdnAddr + $"/NewResources/Android/AssetStorage.{request.asVer}.txt").ToText();
             File.WriteAllText(folder.FullName + "AssetStorage.txt", assetstorage);
@@ -137,8 +137,8 @@ namespace ZuZheng
                 ASStatus.Text = "未填充 ×";
                 return;
             }
-
             File.WriteAllText(folder.FullName + "AssetStorage_dec.txt", request.assetstorage_dec);
+            GC.Collect();
             var assetStore = File.ReadAllLines(AssetStorageFilePath);
             var AudioArray = new JArray();
             var MovieArray = new JArray();
@@ -173,7 +173,6 @@ namespace ZuZheng
                         new JProperty("fileName", fileName)));
                 }
             }
-
             File.WriteAllText(folder.FullName + "AudioName.json", AudioArray.ToString());
             File.WriteAllText(folder.FullName + "MovieName.json", MovieArray.ToString());
             File.WriteAllText(folder.FullName + "AssetName.json", AssetArray.ToString());
@@ -181,6 +180,7 @@ namespace ZuZheng
             DownloadMovieBtn.IsEnabled = true;
             DownloadAudioBtn.IsEnabled = true;
             DownloadAssetsBtn.IsEnabled = true;
+            GC.Collect();
         }
 
         private void UnpackMasterData()
@@ -206,6 +206,34 @@ namespace ZuZheng
                 var mstEventArray = (JArray)JsonConvert.DeserializeObject(mstEventJObject["eventEntity"].ToString());
                 File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstEvent.json",
                     mstEventArray.ToString());
+                var mstAi = new AiEntityArray();
+                mstAi.MergeFrom(d_masterd.AiEntity);
+                var mstAiJsonString = formatter.Format(mstAi);
+                var mstAiJObject = (JObject)JsonConvert.DeserializeObject(mstAiJsonString);
+                var mstAiArray = (JArray)JsonConvert.DeserializeObject(mstAiJObject["aiEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstAi.json",
+                    mstAiArray.ToString());
+                var mstAiAct = new AiActEntityArray();
+                mstAiAct.MergeFrom(d_masterd.AiActEntity);
+                var mstAiActJsonString = formatter.Format(mstAiAct);
+                var mstAiActJObject = (JObject)JsonConvert.DeserializeObject(mstAiActJsonString);
+                var mstAiActArray = (JArray)JsonConvert.DeserializeObject(mstAiActJObject["aiActEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstAiAct.json",
+                    mstAiActArray.ToString());
+                var mstAiField = new AiFieldEntityArray();
+                mstAiField.MergeFrom(d_masterd.AiFieldEntity);
+                var mstAiFieldJsonString = formatter.Format(mstAiField);
+                var mstAiFieldJObject = (JObject)JsonConvert.DeserializeObject(mstAiFieldJsonString);
+                var mstAiFieldArray = (JArray)JsonConvert.DeserializeObject(mstAiFieldJObject["aiFieldEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstAiField.json",
+                    mstAiFieldArray.ToString());
+                var mstStage = new StageEntityArray();
+                mstStage.MergeFrom(d_masterd.StageEntity);
+                var mstStageJsonString = formatter.Format(mstStage);
+                var mstStageJObject = (JObject)JsonConvert.DeserializeObject(mstStageJsonString);
+                var mstStageArray = (JArray)JsonConvert.DeserializeObject(mstStageJObject["stageEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstStage.json",
+                    mstStageArray.ToString());
                 var mstGacha = new GachaEntityArray();
                 mstGacha.MergeFrom(d_masterd.GachaEntity);
                 var mstGachaJsonString = formatter.Format(mstGacha);
@@ -227,6 +255,20 @@ namespace ZuZheng
                 var mstQuestArray = (JArray)JsonConvert.DeserializeObject(mstQuestJObject["questEntity"].ToString());
                 File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstQuest.json",
                     mstQuestArray.ToString());
+                var mstQuestPhase = new QuestPhaseEntityArray();
+                mstQuestPhase.MergeFrom(d_masterd.QuestPhaseEntity);
+                var mstQuestPhaseJsonString = formatter.Format(mstQuestPhase);
+                var mstQuestPhaseJObject = (JObject)JsonConvert.DeserializeObject(mstQuestPhaseJsonString);
+                var mstQuestPhaseArray = (JArray)JsonConvert.DeserializeObject(mstQuestPhaseJObject["questPhaseEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstQuestPhase.json",
+                    mstQuestPhaseArray.ToString());
+                var mstQuestPhaseDetailAdd = new QuestPhaseDetailAddEntityArray();
+                mstQuestPhaseDetailAdd.MergeFrom(d_masterd.QuestPhaseDetailAddEntity);
+                var mstQuestPhaseDetailAddJsonString = formatter.Format(mstQuestPhaseDetailAdd);
+                var mstQuestPhaseDetailAddJObject = (JObject)JsonConvert.DeserializeObject(mstQuestPhaseDetailAddJsonString);
+                var mstQuestPhaseDetailAddArray = (JArray)JsonConvert.DeserializeObject(mstQuestPhaseDetailAddJObject["questPhaseDetailAddEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstQuestPhaseDetailAdd.json",
+                    mstQuestPhaseDetailAddArray.ToString());
                 var mstQuestPickup = new QuestPickupEntityArray();
                 mstQuestPickup.MergeFrom(d_masterd.QuestPickupEntity);
                 var mstQuestPickupJsonString = formatter.Format(mstQuestPickup);
@@ -465,10 +507,9 @@ namespace ZuZheng
                 File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "npcSvtFollower.json",
                     npcSvtFollowerArray.ToString());
                 MessageBox.Info("MasterData数据写入完成.", "写入完成");
-                input.Close();
                 Dispatcher.Invoke(() => { MainForm.Title = "ZuZheng"; });
-                GC.Collect();
             }
+            GC.Collect();
         }
 
         private void DownloadMovieBtn_OnClick(object sender, RoutedEventArgs e)
