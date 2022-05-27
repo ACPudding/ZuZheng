@@ -315,6 +315,20 @@ namespace ZuZheng
                 var mstSvtArray = (JArray)JsonConvert.DeserializeObject(mstSvtJObject["servantEntity"].ToString());
                 File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvt.json",
                     mstSvtArray.ToString());
+                var mstSvtSkill = new ServantSkillEntityArray();
+                mstSvtSkill.MergeFrom(d_masterd.ServantSkillEntity);
+                var mstSvtSkillJsonString = formatter.Format(mstSvtSkill);
+                var mstSvtSkillJObject = (JObject)JsonConvert.DeserializeObject(mstSvtSkillJsonString);
+                var mstSvtSkillArray = (JArray)JsonConvert.DeserializeObject(mstSvtSkillJObject["servantSkillEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtSkill.json",
+                    mstSvtSkillArray.ToString());
+                var mstSvtSkillRelease = new ServantSkillReleaseEntityArray();
+                mstSvtSkillRelease.MergeFrom(d_masterd.ServantSkillReleaseEntity);
+                var mstSvtSkillReleaseJsonString = formatter.Format(mstSvtSkillRelease);
+                var mstSvtSkillReleaseJObject = (JObject)JsonConvert.DeserializeObject(mstSvtSkillReleaseJsonString);
+                var mstSvtSkillReleaseArray = (JArray)JsonConvert.DeserializeObject(mstSvtSkillReleaseJObject["servantSkillReleaseEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtSkillRelease.json",
+                    mstSvtSkillReleaseArray.ToString());
                 var mstSvtFilter = new ServantFilterEntityArray();
                 mstSvtFilter.MergeFrom(d_masterd.ServantFilterEntity);
                 var mstSvtFilterJsonString = formatter.Format(mstSvtFilter);
