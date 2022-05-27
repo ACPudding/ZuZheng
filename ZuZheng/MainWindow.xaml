@@ -69,7 +69,7 @@
                     <TextBlock Text="ZuZheng" HorizontalAlignment="Left" Height="40"
                                Margin="10,10,0,0" VerticalAlignment="Top" Width="383"
                                FontSize="18" Foreground="#FF333333" FontWeight="Bold" />
-                    <TextBlock x:Name="VersionLabel" Text="版本号:   v1.1.2" HorizontalAlignment="Left" Height="28"
+                    <TextBlock x:Name="VersionLabel" Text="版本号:   v1.1.3" HorizontalAlignment="Left" Height="28"
                                Margin="296,139,0,0" VerticalAlignment="Top" Width="84"
                                FontSize="11.5" Foreground="#FF333333" />
                     <TextBlock Text="作者: @TAKAGIMIWAKO" HorizontalAlignment="Left" Height="27" Margin="10,54,0,0"
