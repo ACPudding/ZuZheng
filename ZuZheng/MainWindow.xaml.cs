@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using Google.Protobuf;
 using ICSharpCode.SharpZipLib.BZip2;
+using Microsoft.WindowsAPICodePack.Dialogs;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using MessageBox = HandyControl.Controls.MessageBox;
@@ -22,6 +23,7 @@ namespace ZuZheng
         private static readonly DirectoryInfo Assets = new DirectoryInfo(path + @"\Android\Assets\");
         private static readonly DirectoryInfo AssetsMovie = new DirectoryInfo(path + @"\Android\Movie\");
         private static readonly DirectoryInfo AssetsAudio = new DirectoryInfo(path + @"\Android\Audio\");
+        private static readonly DirectoryInfo DifferMain = new DirectoryInfo(path + @"\Android\Differ\");
 
         private static readonly string networkurlA =
             "https://line3-s2-bili-fate.bilibiligame.net/rongame_beta/rgfate/60_member/network/network_config_android_";
@@ -34,6 +36,7 @@ namespace ZuZheng
         private static readonly string AssetStorageFilePath = folder.FullName + "AssetStorage_dec.txt";
 
         private static AskRequests request;
+        private static readonly object LockedList = new object();
 
         public MainWindow()
         {
@@ -115,6 +118,7 @@ namespace ZuZheng
             {
                 MessageBox.Error("解析MasterData失败!\r\n\r\n错误: \r\n" + exception, "错误");
             }
+
             GC.Collect();
             var assetstorage = HttpRequest
                 .Get(request.cdnAddr + $"/NewResources/Android/AssetStorage.{request.asVer}.txt").ToText();
@@ -137,6 +141,9 @@ namespace ZuZheng
                 ASStatus.Text = "未填充 ×";
                 return;
             }
+
+            TryAsWithDate.IsEnabled = true;
+            StartChayiDownload.IsEnabled = true;
             File.WriteAllText(folder.FullName + "AssetStorage_dec.txt", request.assetstorage_dec);
             GC.Collect();
             var assetStore = File.ReadAllLines(AssetStorageFilePath);
@@ -173,6 +180,7 @@ namespace ZuZheng
                         new JProperty("fileName", fileName)));
                 }
             }
+
             File.WriteAllText(folder.FullName + "AudioName.json", AudioArray.ToString());
             File.WriteAllText(folder.FullName + "MovieName.json", MovieArray.ToString());
             File.WriteAllText(folder.FullName + "AssetName.json", AssetArray.ToString());
@@ -225,7 +233,8 @@ namespace ZuZheng
                 mstAiField.MergeFrom(d_masterd.AiFieldEntity);
                 var mstAiFieldJsonString = formatter.Format(mstAiField);
                 var mstAiFieldJObject = (JObject)JsonConvert.DeserializeObject(mstAiFieldJsonString);
-                var mstAiFieldArray = (JArray)JsonConvert.DeserializeObject(mstAiFieldJObject["aiFieldEntity"].ToString());
+                var mstAiFieldArray =
+                    (JArray)JsonConvert.DeserializeObject(mstAiFieldJObject["aiFieldEntity"].ToString());
                 File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstAiField.json",
                     mstAiFieldArray.ToString());
                 var mstStage = new StageEntityArray();
@@ -261,15 +270,20 @@ namespace ZuZheng
                 mstQuestPhase.MergeFrom(d_masterd.QuestPhaseEntity);
                 var mstQuestPhaseJsonString = formatter.Format(mstQuestPhase);
                 var mstQuestPhaseJObject = (JObject)JsonConvert.DeserializeObject(mstQuestPhaseJsonString);
-                var mstQuestPhaseArray = (JArray)JsonConvert.DeserializeObject(mstQuestPhaseJObject["questPhaseEntity"].ToString());
+                var mstQuestPhaseArray =
+                    (JArray)JsonConvert.DeserializeObject(mstQuestPhaseJObject["questPhaseEntity"].ToString());
                 File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstQuestPhase.json",
                     mstQuestPhaseArray.ToString());
                 var mstQuestPhaseDetailAdd = new QuestPhaseDetailAddEntityArray();
                 mstQuestPhaseDetailAdd.MergeFrom(d_masterd.QuestPhaseDetailAddEntity);
                 var mstQuestPhaseDetailAddJsonString = formatter.Format(mstQuestPhaseDetailAdd);
-                var mstQuestPhaseDetailAddJObject = (JObject)JsonConvert.DeserializeObject(mstQuestPhaseDetailAddJsonString);
-                var mstQuestPhaseDetailAddArray = (JArray)JsonConvert.DeserializeObject(mstQuestPhaseDetailAddJObject["questPhaseDetailAddEntity"].ToString());
-                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstQuestPhaseDetailAdd.json",
+                var mstQuestPhaseDetailAddJObject =
+                    (JObject)JsonConvert.DeserializeObject(mstQuestPhaseDetailAddJsonString);
+                var mstQuestPhaseDetailAddArray =
+                    (JArray)JsonConvert.DeserializeObject(mstQuestPhaseDetailAddJObject["questPhaseDetailAddEntity"]
+                        .ToString());
+                File.WriteAllText(
+                    folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstQuestPhaseDetailAdd.json",
                     mstQuestPhaseDetailAddArray.ToString());
                 var mstQuestPickup = new QuestPickupEntityArray();
                 mstQuestPickup.MergeFrom(d_masterd.QuestPickupEntity);
@@ -305,27 +319,33 @@ namespace ZuZheng
                 var mstCampaignVoiceCaptions = new CampaignVoiceCaptionsEntityArray();
                 mstCampaignVoiceCaptions.MergeFrom(d_masterd.CampaignVoiceCaptionsEntity);
                 var mstCampaignVoiceCaptionsJsonString = formatter.Format(mstCampaignVoiceCaptions);
-                var mstCampaignVoiceCaptionsJObject = (JObject)JsonConvert.DeserializeObject(mstCampaignVoiceCaptionsJsonString);
+                var mstCampaignVoiceCaptionsJObject =
+                    (JObject)JsonConvert.DeserializeObject(mstCampaignVoiceCaptionsJsonString);
                 var mstCampaignVoiceCaptionsArray =
-                    (JArray)JsonConvert.DeserializeObject(mstCampaignVoiceCaptionsJObject["campaignVoiceCaptionsEntity"].ToString());
-                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstCampaignVoiceCaptions.json",
+                    (JArray)JsonConvert.DeserializeObject(mstCampaignVoiceCaptionsJObject["campaignVoiceCaptionsEntity"]
+                        .ToString());
+                File.WriteAllText(
+                    folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstCampaignVoiceCaptions.json",
                     mstCampaignVoiceCaptionsArray.ToString());
                 var mstNpVoiceCaptions = new NpVoiceCaptionsEntityArray();
                 mstNpVoiceCaptions.MergeFrom(d_masterd.NpVoiceCaptionsEntity);
                 var mstNpVoiceCaptionsJsonString = formatter.Format(mstNpVoiceCaptions);
                 var mstNpVoiceCaptionsJObject = (JObject)JsonConvert.DeserializeObject(mstNpVoiceCaptionsJsonString);
                 var mstNpVoiceCaptionsArray =
-                    (JArray)JsonConvert.DeserializeObject(mstNpVoiceCaptionsJObject["npVoiceCaptionsEntity"].ToString());
+                    (JArray)JsonConvert.DeserializeObject(mstNpVoiceCaptionsJObject["npVoiceCaptionsEntity"]
+                        .ToString());
                 foreach (var linevals in mstNpVoiceCaptionsArray)
                 {
-                    if (((JObject)linevals)["scriptJsonXuyaoshiyongjsonchulidebianliang"].ToString() == "")
-                    {
-                        continue;
-                    }
-                    var needtoCvtJsonString = ((JObject)linevals)["scriptJsonXuyaoshiyongjsonchulidebianliang"].ToString();
+                    if (((JObject)linevals)["scriptJsonXuyaoshiyongjsonchulidebianliang"].ToString() == "") continue;
+
+                    var needtoCvtJsonString =
+                        ((JObject)linevals)["scriptJsonXuyaoshiyongjsonchulidebianliang"].ToString();
                     var CvtJson = (JArray)JsonConvert.DeserializeObject(needtoCvtJsonString);
-                    ((JObject)linevals)["scriptJsonXuyaoshiyongjsonchulidebianliang"] = (JArray)JsonConvert.DeserializeObject(CvtJson.ToString().Replace(" ", "").Replace("\r\n", "").Replace("[r]\n", ""));
+                    ((JObject)linevals)["scriptJsonXuyaoshiyongjsonchulidebianliang"] =
+                        (JArray)JsonConvert.DeserializeObject(CvtJson.ToString().Replace(" ", "").Replace("\r\n", "")
+                            .Replace("[r]\n", ""));
                 }
+
                 File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstNpVoiceCaptions.json",
                     mstNpVoiceCaptionsArray.ToString());
                 GC.Collect();
@@ -364,17 +384,20 @@ namespace ZuZheng
                 mstSvtVoice.MergeFrom(d_masterd.ServantVoiceEntity);
                 var mstSvtVoiceJsonString = formatter.Format(mstSvtVoice);
                 var mstSvtVoiceJObject = (JObject)JsonConvert.DeserializeObject(mstSvtVoiceJsonString);
-                var mstSvtVoiceArray = (JArray)JsonConvert.DeserializeObject(mstSvtVoiceJObject["servantVoiceEntity"].ToString());
+                var mstSvtVoiceArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtVoiceJObject["servantVoiceEntity"].ToString());
                 foreach (var linevals in mstSvtVoiceArray)
                 {
-                    if (((JObject)linevals)["scriptJsonXuyaoshiyongjsonchulidebianliang"].ToString()=="")
-                    {
-                        continue;
-                    }
-                    var needtoCvtJsonString = ((JObject)linevals)["scriptJsonXuyaoshiyongjsonchulidebianliang"].ToString();
+                    if (((JObject)linevals)["scriptJsonXuyaoshiyongjsonchulidebianliang"].ToString() == "") continue;
+
+                    var needtoCvtJsonString =
+                        ((JObject)linevals)["scriptJsonXuyaoshiyongjsonchulidebianliang"].ToString();
                     var CvtJson = (JArray)JsonConvert.DeserializeObject(needtoCvtJsonString);
-                    ((JObject)linevals)["scriptJsonXuyaoshiyongjsonchulidebianliang"] = (JArray)JsonConvert.DeserializeObject(CvtJson.ToString().Replace(" ", "").Replace("\r\n", "").Replace("[r]\n",""));
+                    ((JObject)linevals)["scriptJsonXuyaoshiyongjsonchulidebianliang"] =
+                        (JArray)JsonConvert.DeserializeObject(CvtJson.ToString().Replace(" ", "").Replace("\r\n", "")
+                            .Replace("[r]\n", ""));
                 }
+
                 File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtVoice.json",
                     mstSvtVoiceArray.ToString());
                 GC.Collect();
@@ -382,14 +405,17 @@ namespace ZuZheng
                 mstSvtSkill.MergeFrom(d_masterd.ServantSkillEntity);
                 var mstSvtSkillJsonString = formatter.Format(mstSvtSkill);
                 var mstSvtSkillJObject = (JObject)JsonConvert.DeserializeObject(mstSvtSkillJsonString);
-                var mstSvtSkillArray = (JArray)JsonConvert.DeserializeObject(mstSvtSkillJObject["servantSkillEntity"].ToString());
+                var mstSvtSkillArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtSkillJObject["servantSkillEntity"].ToString());
                 File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtSkill.json",
                     mstSvtSkillArray.ToString());
                 var mstSvtSkillRelease = new ServantSkillReleaseEntityArray();
                 mstSvtSkillRelease.MergeFrom(d_masterd.ServantSkillReleaseEntity);
                 var mstSvtSkillReleaseJsonString = formatter.Format(mstSvtSkillRelease);
                 var mstSvtSkillReleaseJObject = (JObject)JsonConvert.DeserializeObject(mstSvtSkillReleaseJsonString);
-                var mstSvtSkillReleaseArray = (JArray)JsonConvert.DeserializeObject(mstSvtSkillReleaseJObject["servantSkillReleaseEntity"].ToString());
+                var mstSvtSkillReleaseArray =
+                    (JArray)JsonConvert.DeserializeObject(mstSvtSkillReleaseJObject["servantSkillReleaseEntity"]
+                        .ToString());
                 File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtSkillRelease.json",
                     mstSvtSkillReleaseArray.ToString());
                 var mstSvtFilter = new ServantFilterEntityArray();
@@ -445,6 +471,7 @@ namespace ZuZheng
                     File.WriteAllText(
                         folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstSvtAppendPassiveSkill.json", "[]");
                 }
+
                 GC.Collect();
                 var mstSvtExp = new ServantExpEntityArray();
                 mstSvtExp.MergeFrom(d_masterd.ServantExpEntity);
@@ -590,6 +617,7 @@ namespace ZuZheng
                 MessageBox.Info("MasterData数据写入完成.", "写入完成");
                 Dispatcher.Invoke(() => { MainForm.Title = "ZuZheng"; });
             }
+
             GC.Collect();
         }
 
@@ -811,6 +839,260 @@ namespace ZuZheng
                 DownloadAssetsBtn.IsEnabled = true;
                 progressbar.Value = 0;
             });
+        }
+
+        private void TryAssetStorages(object sender, RoutedEventArgs e)
+        {
+            var date = InputTryDate.Text;
+            TryAsWithDate.IsEnabled = false;
+            if (date.Length != 8)
+            {
+                MessageBox.Error("日期格式错误(例: 20220612).", "错误");
+                TryAsWithDate.IsEnabled = true;
+                InputTryDate.Text = "";
+                return;
+            }
+
+            Task.Run(() => TAS(date));
+        }
+
+        private void TAS(string date_ins)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                TryAsStatus.Items.Clear();
+                astrybar.Value = 0.0;
+            });
+            var p_value = (double)10000 / 2400;
+            for (var i = 0; i < 2400; i++)
+            {
+                var Time = i.ToString("0000");
+                if (Convert.ToInt32(Time.Substring(2, 2)) >= 60)
+                {
+                    Dispatcher.Invoke(() => { astrybar.Value += p_value; });
+                    continue;
+                }
+
+                var str =
+                    $"{request.cdnAddr}/NewResources/Android/AssetStorage.{date_ins}{Time}.txt";
+                try
+                {
+                    var assetstorage = HttpRequest.Get(str).ToText();
+                    Dispatcher.Invoke(() =>
+                    {
+                        TryAsStatus.Items.Insert(0, $"尝试: AssetStorage.{date_ins}{Time}.txt - 状态: Success.");
+                        TryAsStatus.Items.Insert(0, "写入AssetStorage文件...");
+                        astrybar.Value += p_value;
+                    });
+                    File.WriteAllText(folder.FullName + $"AssetStorage.{date_ins}{Time}.txt", assetstorage);
+                    Dispatcher.Invoke(() => { TryAsStatus.Items.Insert(0, "解密AssetStorage文件..."); });
+                    var as_read = File.ReadAllText(folder.FullName + $"AssetStorage.{date_ins}{Time}.txt");
+                    var as_output = CatAndMouseGame.MouseGame8(as_read);
+                    File.WriteAllText(folder.FullName + $"AssetStorage_dec.{date_ins}{Time}.txt", as_output);
+                    Dispatcher.Invoke(() => { TryAsStatus.Items.Insert(0, "获取成功."); });
+                    Dispatcher.Invoke(() => { astrybar.Value = astrybar.Maximum; });
+                    break;
+                }
+                catch (Exception)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        TryAsStatus.Items.Insert(0, $"尝试: AssetStorage.{date_ins}{Time}.txt - 状态: 404 Not Found.");
+                        astrybar.Value += p_value;
+                    });
+                    if (i == 2359)
+                        Dispatcher.Invoke(() =>
+                        {
+                            MessageBox.Error("未能按照当前指定的日期获取到AssetStorage文件.\r\n请尝试其他日期!", "失败");
+                            TryAsStatus.Items.Insert(0, "获取失败.请尝试其他日期.");
+                            astrybar.Value = astrybar.Maximum;
+                        });
+                }
+            }
+
+            Thread.Sleep(2000);
+            Dispatcher.Invoke(() =>
+            {
+                TryAsWithDate.IsEnabled = true;
+                TryAsStatus.Items.Clear();
+                astrybar.Value = 0.0;
+            });
+            GC.Collect();
+        }
+
+        private void StartChayiDownload_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (!Directory.Exists(DifferMain.FullName)) Directory.CreateDirectory(DifferMain.FullName);
+            AsDownloadStatus.Items.Clear();
+            Asprogressbar2.Value = 0.0;
+            var inputolddialog = new CommonOpenFileDialog { Title = "选择旧版本的AssetStorage文件.", Multiselect = false };
+            inputolddialog.Filters.Add(new CommonFileDialogFilter("已解密的AssetStorage文件", "txt"));
+            var resultoldinput = inputolddialog.ShowDialog();
+            var input_old = "";
+            if (resultoldinput == CommonFileDialogResult.Ok) input_old = inputolddialog.FileName;
+            if (input_old == "")
+                return;
+            if (!IsDecryptedAssetStorage(File.ReadAllText(input_old)))
+            {
+                MessageBox.Error("该文件不是解密后的AssetStorage.txt文件", "错误");
+                return;
+            }
+
+            GC.Collect();
+            var inputnewdialog = new CommonOpenFileDialog { Title = "选择新版本的AssetStorage文件.", Multiselect = false };
+            inputnewdialog.Filters.Add(new CommonFileDialogFilter("已解密的AssetStorage文件", "txt"));
+            var resultnewinput = inputnewdialog.ShowDialog();
+            var input_new = "";
+            if (resultnewinput == CommonFileDialogResult.Ok) input_new = inputnewdialog.FileName;
+            if (input_new == "")
+                return;
+            if (!IsDecryptedAssetStorage(File.ReadAllText(input_new)))
+            {
+                MessageBox.Error("该文件不是解密后的AssetStorage.txt文件", "错误");
+                return;
+            }
+
+            GC.Collect();
+            ResetASBtn.IsEnabled = true;
+            StartChayiDownload.IsEnabled = false;
+            MessageBox.Info("请在下方进度条不再滚动之后点击\"重置\"按钮重置状态.", "提示");
+            Task.Run(() => ASDiffer(input_old, input_new));
+        }
+
+        private bool IsDecryptedAssetStorage(string input)
+        {
+            return input.Contains("@FgoDataVersion");
+        }
+
+        private void ASDiffer(string old_dir, string new_dir)
+        {
+            var ASLine = File.ReadAllLines(new_dir);
+            var ASOldLine = File.ReadAllLines(old_dir);
+            var tmpold = new string[ASOldLine.Length, 5];
+            var tmp = new string[ASLine.Length, 5];
+            var launched_date = DateTime.Now.ToString("yyyyMMddhhmmss");
+            var dest = DifferMain.FullName + $@"\Differ_{launched_date}\";
+            var p_val = (double)100000 / ASLine.Length;
+            for (var kk = 0; kk < ASLine.Length; kk++)
+            {
+                var tmpkk = ASLine[kk].Split(',');
+                if (tmpkk.Length != 7 && tmpkk.Length != 5)
+                {
+                    tmp[kk, 0] = "0";
+                    tmp[kk, 1] = "0";
+                    tmp[kk, 2] = "0";
+                    tmp[kk, 3] = "0";
+                    tmp[kk, 4] = "0";
+                    continue;
+                }
+
+                tmp[kk, 0] = tmpkk[0];
+                tmp[kk, 1] = tmpkk[1];
+                tmp[kk, 2] = tmpkk[2];
+                tmp[kk, 3] = tmpkk[3];
+                tmp[kk, 4] = tmpkk[4];
+            }
+
+            for (var jj = 0; jj < ASOldLine.Length; jj++)
+            {
+                var tmpkk = ASOldLine[jj].Split(',');
+                if (tmpkk.Length != 7 && tmpkk.Length != 5)
+                {
+                    tmpold[jj, 0] = "0";
+                    tmpold[jj, 1] = "0";
+                    tmpold[jj, 2] = "0";
+                    tmpold[jj, 3] = "0";
+                    tmpold[jj, 4] = "0";
+                    continue;
+                }
+
+                tmpold[jj, 0] = tmpkk[0];
+                tmpold[jj, 1] = tmpkk[1];
+                tmpold[jj, 2] = tmpkk[2];
+                tmpold[jj, 3] = tmpkk[3];
+                tmpold[jj, 4] = tmpkk[4];
+            }
+
+            Parallel.For(0, tmp.GetLength(0), new ParallelOptions { MaxDegreeOfParallelism = 16 }, i =>
+            {
+                if (tmp[i, 0] == "0")
+                {
+                    Dispatcher.Invoke(() => { Asprogressbar2.Value += p_val; });
+                    return;
+                }
+
+                var countno = 0;
+                var FindStr = tmp[i, 4];
+                var ShaName = tmp[i, 0];
+                Parallel.For(0, tmpold.GetLength(0), j =>
+                {
+                    if (tmpold[j, 0] == "0" || tmpold[j, 4] != FindStr)
+                    {
+                        lock (LockedList)
+                        {
+                            countno++;
+                        }
+
+                        return;
+                    }
+
+                    if (ShaName == tmpold[j, 0]) return;
+                    Dispatcher.Invoke(() => { AsDownloadStatus.Items.Insert(0, "差异: " + FindStr.Replace(@"/", "@")); });
+                    DownloadSelectFile(tmp, i, dest);
+                });
+                Dispatcher.Invoke(() => { Asprogressbar2.Value += p_val; });
+                if (countno != tmpold.GetLength(0)) return;
+                Dispatcher.Invoke(() => { AsDownloadStatus.Items.Insert(0, "新增: " + FindStr.Replace(@"/", "@")); });
+                DownloadSelectFile(tmp, i, dest);
+                Dispatcher.Invoke(() => { Asprogressbar2.Value += p_val; });
+            });
+        }
+
+        private void DownloadSelectFile(string[,] ASFileLine, int index, string dest)
+        {
+            if (!Directory.Exists(dest)) Directory.CreateDirectory(dest);
+            var downloadSHAName = ASFileLine[index, 0] + ".bin";
+            var FileTrueName = ASFileLine[index, 4].Replace(@"/", "@");
+            var downloadSHANameshort = downloadSHAName.Substring(0, 2);
+            var url = request.cdnAddr + $"/NewResources/Android/{downloadSHANameshort}/{downloadSHAName}";
+            byte[] Data;
+            try
+            {
+                Data = HttpRequest.Get(url).ToBinary();
+            }
+            catch (Exception)
+            {
+                Dispatcher.Invoke(() => { AsDownloadStatus.Items.Insert(0, $"重试: {FileTrueName}"); });
+                Thread.Sleep(5000);
+                try
+                {
+                    Data = HttpRequest.Get(url).ToBinary();
+                }
+                catch (Exception e)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        AsDownloadStatus.Items.Insert(0, $"{e}");
+                        AsDownloadStatus.Items.Insert(0, $"失败: {FileTrueName}");
+                    });
+                    return;
+                }
+            }
+
+            if (FileTrueName.Contains("Audio") || FileTrueName.Contains("Movie"))
+                File.WriteAllBytes(dest + $"{FileTrueName}", Data);
+            else
+                File.WriteAllBytes(dest + $"{FileTrueName}.unity3d", CatAndMouseGame.MouseGame4(Data));
+            GC.Collect();
+        }
+
+        private void ResetAS(object sender, RoutedEventArgs e)
+        {
+            Asprogressbar2.Value = 0.0;
+            AsDownloadStatus.Items.Clear();
+            ResetASBtn.IsEnabled = false;
+            StartChayiDownload.IsEnabled = true;
+            GC.Collect();
         }
 
         private struct AskRequests

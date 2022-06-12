@@ -43,13 +43,13 @@
                                Text="2、上方数据填充完后便可点击下方按钮分别下载数据.&#xA;暂时没做差异下载功能.(Audio和Assets内容较多,较慢)" Width="380"
                                FontSize="14" />
                     <Button x:Name="DownloadMovieBtn" Style="{StaticResource ButtonPrimary}" Content="Movie"
-                            Margin="52,317,0,0" hc:BorderElement.CornerRadius="15" VerticalAlignment="Top"
+                            Margin="70,317,0,0" hc:BorderElement.CornerRadius="15" VerticalAlignment="Top"
                             Click="DownloadMovieBtn_OnClick" HorizontalAlignment="Left" IsEnabled="False" />
                     <Button x:Name="DownloadAudioBtn" Style="{StaticResource ButtonPrimary}" Content="Audio"
-                            Margin="0,317,0,0" hc:BorderElement.CornerRadius="15" VerticalAlignment="Top"
-                            Click="DownloadAudioBtn_OnClick" IsEnabled="False" />
+                            Margin="10,317,0,0" hc:BorderElement.CornerRadius="15" VerticalAlignment="Top"
+                            Click="DownloadAudioBtn_OnClick" IsEnabled="False" HorizontalAlignment="Left" />
                     <Button x:Name="DownloadAssetsBtn" Style="{StaticResource ButtonPrimary}" Content="Assets"
-                            Margin="293,317,0,0" hc:BorderElement.CornerRadius="15" VerticalAlignment="Top"
+                            Margin="130,317,0,0" hc:BorderElement.CornerRadius="15" VerticalAlignment="Top"
                             Click="DownloadAssetsBtn_OnClick" IsEnabled="False" HorizontalAlignment="Left" />
                     <ListBox x:Name="DownloadStatus" Margin="10,352,10,30" Foreground="#FF737373" FontSize="11.5"
                              RenderTransformOrigin="0.5,0.5">
@@ -63,13 +63,60 @@
                                  Background="#FFB9B9B9" SmallChange="0.01" />
                 </Grid>
             </TabItem>
-            <TabItem Header="关于" Margin="285,0,-285,0.4">
+            <TabItem Header="辅助功能">
+                <Grid>
+                    <TextBlock HorizontalAlignment="Center" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Text="A - AssetStorage枚举下载"
+                               VerticalAlignment="Top" Height="23" Width="374" FontSize="16" />
+                    <TextBlock Margin="10,35,4,427" TextWrapping="Wrap"
+                               Text="注: BGO的AssetStorage不同于日服,需要按照服务器给定的日期版本来下载.本功能适合提前枚举维护后的资源文件列表.以供下方功能B使用.请按照如20220612的格式填写下方文本框."
+                               Width="380" FontSize="14" />
+                    <TextBox x:Name="InputTryDate" Style="{StaticResource TextBoxExtend}"
+                             hc:InfoElement.TitlePlacement="Left" hc:InfoElement.Title="输入8位日期"
+                             VerticalAlignment="Top" Margin="10,109,200,0" MaxLength="8" />
+                    <Button Style="{StaticResource ButtonPrimary}" Content="尝试枚举" Margin="256,111,0,0"
+                            hc:BorderElement.CornerRadius="15" HorizontalAlignment="Left" VerticalAlignment="Top"
+                            Click="TryAssetStorages" x:Name="TryAsWithDate" IsEnabled="False" />
+                    <ListBox x:Name="TryAsStatus" Margin="10,150,10,330" Foreground="#FF737373" FontSize="9"
+                             RenderTransformOrigin="0.5,0.5">
+                        <ListBox.Background>
+                            <SolidColorBrush Color="White" Opacity="0.4" />
+                        </ListBox.Background>
+                    </ListBox>
+                    <ProgressBar x:Name="astrybar"
+                                 HorizontalAlignment="Center" Height="21" Margin="0,214,0,0"
+                                 VerticalAlignment="Top" Width="380" Maximum="10000"
+                                 Background="#FFB9B9B9" SmallChange="0.01" />
+                    <TextBlock HorizontalAlignment="Left" Margin="7,243,0,0" TextWrapping="Wrap" Text="B - 差异下载"
+                               VerticalAlignment="Top" Height="23" Width="374" FontSize="16" />
+                    <TextBlock Margin="7,268,7,186" TextWrapping="Wrap"
+                               Text="注: 暂时无法与资源下载部分功能进行整合,故分开成了一个单独的功能.点击下方按钮后请根据对话框要求选择先后两个AssetStorage文件(需解密后)进行下载.差异判断的过程CPU与内存资源的占用率可能偏高，需注意."
+                               Width="380" FontSize="14" />
+                    <Button Style="{StaticResource ButtonPrimary}" Content="差异下载" Margin="168,353,0,0"
+                            hc:BorderElement.CornerRadius="15" HorizontalAlignment="Left" VerticalAlignment="Top"
+                            Click="StartChayiDownload_OnClick" x:Name="StartChayiDownload" IsEnabled="False" />
+                    <Button Style="{StaticResource ButtonPrimary}" Content="重置" Margin="343,353,0,0"
+                            hc:BorderElement.CornerRadius="15" HorizontalAlignment="Left" VerticalAlignment="Top"
+                            Click="ResetAS" IsEnabled="False" x:Name="ResetASBtn" />
+                    <ListBox x:Name="AsDownloadStatus" Margin="10,389,10,30" Foreground="#FF737373" FontSize="9"
+                             RenderTransformOrigin="0.5,0.5">
+                        <ListBox.Background>
+                            <SolidColorBrush Color="White" Opacity="0.4" />
+                        </ListBox.Background>
+                    </ListBox>
+                    <ProgressBar x:Name="Asprogressbar2"
+                                 HorizontalAlignment="Center" Height="21" Margin="0,513,0,0"
+                                 VerticalAlignment="Top" Width="380" Maximum="100000"
+                                 Background="#FFB9B9B9" SmallChange="0.01" />
+                </Grid>
+            </TabItem>
+            <TabItem Header="关于" Margin="220,0,-220,0.4">
                 <Grid>
                     <Image Margin="284,8,2,446" Source="icon/229.png" RenderTransformOrigin="0.5,0.5" />
                     <TextBlock Text="ZuZheng" HorizontalAlignment="Left" Height="40"
                                Margin="10,10,0,0" VerticalAlignment="Top" Width="383"
                                FontSize="18" Foreground="#FF333333" FontWeight="Bold" />
-                    <TextBlock x:Name="VersionLabel" Text="版本号:   v1.1.3" HorizontalAlignment="Left" Height="28"
+                    <TextBlock x:Name="VersionLabel" Text="版本号:   v1.2.0" HorizontalAlignment="Left" Height="28"
                                Margin="296,139,0,0" VerticalAlignment="Top" Width="84"
                                FontSize="11.5" Foreground="#FF333333" />
                     <TextBlock Text="作者: @TAKAGIMIWAKO" HorizontalAlignment="Left" Height="27" Margin="10,54,0,0"
