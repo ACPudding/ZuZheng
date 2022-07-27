@@ -78,7 +78,7 @@ namespace ZuZheng
             Selcdn.Text = request.cdnAddr;
             var member_url = request.serAddr + member + $"?appVer={request.appVerInput}" +
                              $"&developmentAuthCode={developmentAuthCode}";
-            var member_result = HttpRequest.Get(member_url).ToText();
+            var member_result = HttpRequest.Get(member_url).ToText().Replace("%3D", "=");
             JObject decrypted_mr;
             try
             {
@@ -90,10 +90,29 @@ namespace ZuZheng
                 InputAppVer.Text = "";
                 return;
             }
-
             if (!folder.Exists) folder.Create();
-            request.asVer = decrypted_mr["response"][0]["success"]["assetStorageVersion"].ToString();
-            request.mstVer = decrypted_mr["response"][0]["success"]["version"].ToString();
+            try
+            {
+                request.asVer = decrypted_mr["response"][0]["success"]["assetStorageVersion"].ToString();
+                request.mstVer = decrypted_mr["response"][0]["success"]["version"].ToString();
+            }
+            catch (Exception exception)
+            {
+                try
+                {
+                    var failtitle = decrypted_mr["response"][0]["fail"]["title"].ToString();
+                    var faildetail = decrypted_mr["response"][0]["fail"]["detail"].ToString().Replace(@"\n","\r\n");
+                    MessageBox.Error($"获取信息失败!\r\n服务器返回:\r\n{failtitle}\r\n【公告内容】\r\n{faildetail}", "错误");
+                    InputAppVer.Text = "";
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Error($"获取信息失败!未知错误。\r\n{ex}", "错误");
+                    InputAppVer.Text = "";
+                    return;
+                }
+            }
             if (request.asVer == "")
             {
                 MessageBox.Error("获取版本信息失败!", "错误");
@@ -215,6 +234,13 @@ namespace ZuZheng
                 var mstEventArray = (JArray)JsonConvert.DeserializeObject(mstEventJObject["eventEntity"].ToString());
                 File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstEvent.json",
                     mstEventArray.ToString());
+                var mstEventMission = new EventMissionEntityArray();
+                mstEventMission.MergeFrom(d_masterd.EventMissionEntity);
+                var mstEventMissionJsonString = formatter.Format(mstEventMission);
+                var mstEventMissionJObject = (JObject)JsonConvert.DeserializeObject(mstEventMissionJsonString);
+                var mstEventMissionArray = (JArray)JsonConvert.DeserializeObject(mstEventMissionJObject["eventMissionEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstEventMission.json",
+                    mstEventMissionArray.ToString());
                 var mstAi = new AiEntityArray();
                 mstAi.MergeFrom(d_masterd.AiEntity);
                 var mstAiJsonString = formatter.Format(mstAi);
@@ -614,6 +640,31 @@ namespace ZuZheng
                     (JArray)JsonConvert.DeserializeObject(npcSvtFollowerJObject["npcServantFollowerEntity"].ToString());
                 File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "npcSvtFollower.json",
                     npcSvtFollowerArray.ToString());
+                var mstMovieTalk = new MovieTalkEntityArray();
+                mstMovieTalk.MergeFrom(d_masterd.MovieTalkEntity);
+                var mstMovieTalkJsonString = formatter.Format(mstMovieTalk);
+                var mstMovieTalkJObject = (JObject)JsonConvert.DeserializeObject(mstMovieTalkJsonString);
+                var mstMovieTalkArray =
+                    (JArray)JsonConvert.DeserializeObject(mstMovieTalkJObject["movieTalkEntity"].ToString());
+                File.WriteAllText(folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstMovieTalk.json",
+                    mstMovieTalkArray.ToString());
+                var mstAssetbundleKey = new AssetbundleKeyEntityArray();
+                mstAssetbundleKey.MergeFrom(d_masterd.AssetbundleKeyEntity);
+                var mstAssetbundleKeyJsonString = formatter.Format(mstAssetbundleKey);
+                var mstAssetbundleKeyJObject = (JObject)JsonConvert.DeserializeObject(mstAssetbundleKeyJsonString);
+                if (!d_masterd.ServantAppendPassiveSkillEntity.IsEmpty)
+                {
+                    var mstAssetbundleKeyArray =
+                        (JArray)JsonConvert.DeserializeObject(mstAssetbundleKeyJObject["assetbundleKeyEntity"].ToString());
+                    File.WriteAllText(
+                        folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstAssetbundleKey.json",
+                        mstAssetbundleKeyArray.ToString());
+                }
+                else
+                {
+                    File.WriteAllText(
+                        folder.FullName + @"\masterdata\decrypted_masterdata\" + "mstAssetbundleKey.json", "[]");
+                }
                 MessageBox.Info("MasterData数据写入完成.", "写入完成");
                 Dispatcher.Invoke(() => { MainForm.Title = "ZuZheng"; });
             }
@@ -1104,6 +1155,13 @@ namespace ZuZheng
             public string asVer;
             public string mstVer;
             public string assetstorage_dec;
+        }
+
+        private void LoadServerListTemp(object sender, RoutedEventArgs e)
+        {
+            request.cdnAddr = "http://line3-patch-fate.bilibiligame.net/2450";
+            TryAsWithDate.IsEnabled = true;
+            StartChayiDownload.IsEnabled = true;
         }
     }
 }
