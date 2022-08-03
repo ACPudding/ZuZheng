@@ -941,8 +941,6 @@ namespace ZuZheng
                     var as_output = CatAndMouseGame.MouseGame8(as_read);
                     File.WriteAllText(folder.FullName + $"AssetStorage_dec.{date_ins}{Time}.txt", as_output);
                     Dispatcher.Invoke(() => { TryAsStatus.Items.Insert(0, "获取成功."); });
-                    Dispatcher.Invoke(() => { astrybar.Value = astrybar.Maximum; });
-                    break;
                 }
                 catch (Exception)
                 {
@@ -954,8 +952,8 @@ namespace ZuZheng
                     if (i == 2359)
                         Dispatcher.Invoke(() =>
                         {
-                            MessageBox.Error("未能按照当前指定的日期获取到AssetStorage文件.\r\n请尝试其他日期!", "失败");
-                            TryAsStatus.Items.Insert(0, "获取失败.请尝试其他日期.");
+                            MessageBox.Info("枚举完成.\r\n若未获取到任何文件请尝试其他日期!", "提示");
+                            TryAsStatus.Items.Insert(0, "枚举完成.");
                             astrybar.Value = astrybar.Maximum;
                         });
                 }
